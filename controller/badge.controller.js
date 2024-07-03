@@ -1,7 +1,20 @@
-import JWT from "jsonwebtoken";
-import bcrypt from "bcryptjs";
-import User from "../model/user.model.js";
 import Badge from "../model/badge.model.js";
+
+async function generateUnique4DigitBadgeID() {
+  let badge_id;
+  let isUnique = false;
+
+  while (!isUnique) {
+    badge_id = Math.floor(1000 + Math.random() * 9000);
+    const existingBadge = await Badge.findOne({ badge_id });
+
+    if (!existingBadge) {
+      isUnique = true;
+    }
+  }
+
+  return badge_id;
+}
 
 export const createBadgeController = async (req, res) => {
   try {
@@ -10,17 +23,20 @@ export const createBadgeController = async (req, res) => {
     if (!category) {
       return res
         .status(400)
-        .send({ success: false, message: "All fields are required" });
+        .send({ success: false, message: "Category is required" });
     }
 
     const existingBadge = await Badge.findOne({ badge_category: category });
     if (existingBadge) {
       return res.status(400).send({
         success: false,
-        message: "Badges already exist",
+        message: "Badges already exist for this category",
       });
     }
-    const newBadge = await Badge({
+
+    const badge_id = await generateUnique4DigitBadgeID();
+    const newBadge = await new Badge({
+      badge_id,
       badge_category: category,
       badge_status: status,
     }).save();
@@ -29,10 +45,11 @@ export const createBadgeController = async (req, res) => {
 
     res.status(201).send({
       success: true,
-      message: "badge created successfully",
-      badge: { _id, badge_category, badge_status },
+      message: "Badge created successfully",
+      badge: { _id, badge_id, badge_category, badge_status },
     });
   } catch (error) {
+    console.error("Error creating badge:", error.message);
     res.status(500).send({
       success: false,
       message: "Internal Server Error - Error creating badge",
@@ -74,13 +91,11 @@ export const updateBadgeController = async (req, res) => {
       { new: true }
     );
 
-
     res.status(200).send({
       success: true,
       message: "badge Updated SUccessfully",
       updatedBadge,
     });
-
   } catch (error) {
     res.status(400).send({
       success: false,

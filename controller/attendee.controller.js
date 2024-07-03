@@ -1,13 +1,29 @@
+import { Parser } from 'json2csv'; 
 import Attendee from "../model/attendee.model.js";
 import Badge from "../model/badge.model.js";
-
-import { v4 as uuidv4 } from "uuid";
 import Scan from "../model/scan.model.js";
+import crypto from 'crypto';
+
+async function generateUnique6DigitHash() {
+  let reg_number;
+  let isUnique = false;
+
+  while (!isUnique) {
+    reg_number = crypto.randomBytes(3).toString('hex').substring(0, 6);
+    const existingAttendee = await Attendee.findOne({ reg_number });
+
+    if (!existingAttendee) {
+      isUnique = true;
+    }
+  }
+
+  return reg_number;
+}
 
 export const createAttendeeController = async (req, res) => {
   console.log(req.body);
   try {
-    const reg_number = uuidv4();
+    const reg_number = await generateUnique6DigitHash();
     const {
       name,
       place,
@@ -31,21 +47,13 @@ export const createAttendeeController = async (req, res) => {
       enteredIn,
     } = req.body;
 
-    if (!reg_number || !name || !email) {
+    if (!name || !email) {
       return res
         .status(400)
-        .send({ success: false, message: "All fields are required" });
+        .send({ success: false, message: "Name and email are required" });
     }
 
-    const existingAttendee = await Attendee.findOne({ reg_number });
-    if (existingAttendee) {
-      return res.status(400).send({
-        success: false,
-        message: "Attendee already exists",
-      });
-    }
-
-    const newAttendee = await new Attendee({
+    const newAttendee = new Attendee({
       reg_number,
       name,
       place,
@@ -67,7 +75,9 @@ export const createAttendeeController = async (req, res) => {
       certificate_print_dt,
       user_id,
       enteredIn,
-    }).save();
+    });
+
+    await newAttendee.save();
 
     res.status(201).send({
       success: true,
@@ -82,46 +92,7 @@ export const createAttendeeController = async (req, res) => {
     });
   }
 };
-
-// export const getAttendeeController = async (req, res) => {
-//   try {
-//     const { searchQuery } = req.body;
-//     const query = {};
-//     const escapedSearchQuery = searchQuery?.replace(
-//       /[.*+?^${}()|[\]\\]/g,
-//       "\\$&"
-//     );
-
-//     if (escapedSearchQuery) {
-//       query.$or = [
-//         { name: { $regex: new RegExp(escapedSearchQuery, "i") } },
-//         { email: { $regex: new RegExp(escapedSearchQuery, "i") } },
-//         { place: { $regex: new RegExp(escapedSearchQuery, "i") } },
-//         { company: { $regex: new RegExp(escapedSearchQuery, "i") } },
-//         { designation: { $regex: new RegExp(escapedSearchQuery, "i") } },
-//         { reg_number: { $regex: new RegExp(escapedSearchQuery, "i") } },
-//       ];
-//     }
-
-//     const attendees = await Attendee.find(query)
-//       .populate({ path: "badge", model: Badge })
-//       .sort({ createdAt: -1 });
-
-//     res.status(200).send({
-//       success: true,
-//       TotalCount: attendees.length,
-//       message: "All Attendee",
-//       attendees,
-//     });
-//   } catch (error) {
-//     console.error("Error in getting attendees:", error);
-//     res.status(500).send({
-//       success: false,
-//       error,
-//       message: "Error in getting attendees",
-//     });
-//   }
-// };
+ 
 
 export const getAttendeeController = async (req, res) => {
   try {
@@ -309,5 +280,45 @@ export const isAttendeeAllowed = async (req, res) => {
       success: false,
       message: "An error occurred while processing the request",
     });
+  }
+};
+
+export const exportAttendeesController = async (req, res) => {
+  try {
+    const attendees = await Attendee.find().populate('badge state country how_us notAllowed badge_printed_by certificate_printed_by enteredIn.scanId');
+
+    const fields = [
+      'reg_number',
+      'name',
+      'place',
+      'mobile',
+      'email',
+      'company',
+      'badge',
+      'reference',
+      'designation',
+      'state',
+      'country',
+      'how_us',
+      'notAllowed',
+      'badge_printed',
+      'badge_print_dt',
+      'badge_printed_by',
+      'certificate_printed_by',
+      'certificate_printed',
+      'certificate_print_dt',
+      'enteredIn'
+    ];
+    
+    const opts = { fields };
+    const parser = new Parser(opts);
+    const csv = parser.parse(attendees);
+
+    res.header('Content-Type', 'text/csv');
+    res.attachment('attendees.csv');
+    return res.send(csv);
+  } catch (error) {
+    console.error('Error exporting attendees:', error);
+    res.status(500).json({ error: 'Server error' });
   }
 };

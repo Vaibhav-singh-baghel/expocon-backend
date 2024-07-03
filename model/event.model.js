@@ -2,16 +2,16 @@ import mongoose from "mongoose";
 
 const badgeSchema = new mongoose.Schema({
     marginTop:{
-        type: String,
+        type: Number,
     },
     marginBottom:{
-        type: String,
+        type: Number,
     },
     marginLeft:{
-        type: String,
+        type: Number,
     },
     marginRight:{
-        type: String,
+        type: Number,
     },
 });
 

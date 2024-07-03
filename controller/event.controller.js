@@ -56,8 +56,32 @@ export const getLatestBanner = async (req, res) => {
   }
 };
 
+export const getBadgeController = async (req, res) => {
+  try {
+
+    const events = await Event.find({}).sort({ createdAt: -1 });
+    
+    const badge = events[0].badge_setup
+
+    res.status(200).send({
+      success: true,
+      TotalCount: events.length,
+      message: "All events",
+      badge,
+    });
+  } catch (error) {
+    res.status(500).send({
+      success: false,
+      error,
+      message: "Error in getting events",
+    });
+  }
+};
+
 export const getEventsController = async (req, res) => {
   try {
+
+    console.log("firsttttt")
     const events = await Event.find({}).sort({ createdAt: -1 });
 
     res.status(200).send({
@@ -76,7 +100,6 @@ export const getEventsController = async (req, res) => {
 };
 
 export const updateEventController = async (req, res) => {
-  console.log("first")
   try {
     const { badge_setup } = req.fields;
     const { header_graphics } = req.files; 
