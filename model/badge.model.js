@@ -1,11 +1,6 @@
 import mongoose from 'mongoose';
 
 const badgeSchema = new mongoose.Schema({
-    badge_id:{
-        type: String,
-        required: true,
-        unique: true,
-    },
     badge_category: {
         type: String,
         required: true,

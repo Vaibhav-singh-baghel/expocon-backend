@@ -1,21 +1,5 @@
 import Badge from "../model/badge.model.js";
 
-async function generateUnique4DigitBadgeID() {
-  let badge_id;
-  let isUnique = false;
-
-  while (!isUnique) {
-    badge_id = Math.floor(1000 + Math.random() * 9000);
-    const existingBadge = await Badge.findOne({ badge_id });
-
-    if (!existingBadge) {
-      isUnique = true;
-    }
-  }
-
-  return badge_id;
-}
-
 export const createBadgeController = async (req, res) => {
   try {
     const { category, status } = req.body;
@@ -34,9 +18,8 @@ export const createBadgeController = async (req, res) => {
       });
     }
 
-    const badge_id = await generateUnique4DigitBadgeID();
+
     const newBadge = await new Badge({
-      badge_id,
       badge_category: category,
       badge_status: status,
     }).save();
@@ -46,7 +29,7 @@ export const createBadgeController = async (req, res) => {
     res.status(201).send({
       success: true,
       message: "Badge created successfully",
-      badge: { _id, badge_id, badge_category, badge_status },
+      badge: { _id, badge_category, badge_status },
     });
   } catch (error) {
     console.error("Error creating badge:", error.message);

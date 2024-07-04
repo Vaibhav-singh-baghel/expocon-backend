@@ -1,6 +1,11 @@
 import mongoose from 'mongoose';
 
 const scanSchema = new mongoose.Schema({
+    scan_id:{
+        type: String,
+        required: true,
+        unique: true,
+    },
     scan_category: {
         type: String,
         required: true,

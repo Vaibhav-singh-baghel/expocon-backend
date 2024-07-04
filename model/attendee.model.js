@@ -2,8 +2,7 @@ import mongoose from "mongoose";
 
 const enteredInSchema = new mongoose.Schema({
   scanId: {
-    type: mongoose.ObjectId,
-    ref: "Scan",
+    type: String
   },
   enteredAt: {
     type: Date,
@@ -61,8 +60,7 @@ const attendeeSchema = new mongoose.Schema(
     },
     notAllowed: [
       {
-        type: mongoose.ObjectId,
-        ref: "Scan",
+        type: String,
       },
     ],
     badge_printed: {

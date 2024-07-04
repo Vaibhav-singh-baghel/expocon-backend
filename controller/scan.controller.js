@@ -1,33 +1,52 @@
 import Scan from "../model/scan.model.js";
 
+async function generateUnique4DigitBadgeID() {
+  let scan_id;
+  let isUnique = false;
+
+  while (!isUnique) {
+    scan_id = Math.floor(1000 + Math.random() * 9000);
+    const existingScan = await Scan.findOne({ scan_id });
+
+    if (!existingScan) {
+      isUnique = true;
+    }
+  }
+
+  return scan_id;
+}
 
 export const createScanController = async (req, res) => {
   try {
     const { category, status, type } = req.body;
 
     if (!category || !type) {
-      return res 
-        .send({ success: false, message: "All fields are required" });
-    } 
+      return res.send({ success: false, message: "All fields are required" });
+    }
+    const scanId = await generateUnique4DigitBadgeID();
+
     const existingScan = await Scan.findOne({ scan_category: category });
+
     if (existingScan) {
       return res.send({
         success: false,
         message: "Scan already exist",
       });
     }
+
     const newScan = await Scan({
       scan_category: category,
       scan_type: type,
       scan_status: status,
-    }).save(); 
-
-    const { _id, scan_type, scan_status, scan_category } = newScan;
+      scan_id: scanId,
+    }).save();
+    
+    const { _id, scan_type, scan_id, scan_status, scan_category } = newScan;
 
     res.status(201).send({
       success: true,
       message: "Scan created successfully",
-      badge: { _id, scan_category,scan_type, scan_status },
+      badge: { _id, scan_category, scan_id, scan_type, scan_status },
     });
   } catch (error) {
     res.status(500).send({
@@ -58,7 +77,9 @@ export const getScansController = async (req, res) => {
 
 export const getSingleScansController = async (req, res) => {
   try {
-    const scans = await Scan.find({scan_type: "single"}).sort({ createdAt: -1 });
+    const scans = await Scan.find({ scan_type: "single" }).sort({
+      createdAt: -1,
+    });
 
     res.status(200).send({
       success: true,
@@ -77,7 +98,9 @@ export const getSingleScansController = async (req, res) => {
 
 export const getMultiScansController = async (req, res) => {
   try {
-    const scans = await Scan.find({scan_type: "multi"}).sort({ createdAt: -1 });
+    const scans = await Scan.find({ scan_type: "multi" }).sort({
+      createdAt: -1,
+    });
 
     res.status(200).send({
       success: true,
@@ -110,13 +133,11 @@ export const updateScanController = async (req, res) => {
       { new: true }
     );
 
-
     res.status(200).send({
       success: true,
       message: "Scan Updated SUccessfully",
       updatedScan,
     });
-
   } catch (error) {
     res.status(400).send({
       success: false,

@@ -1,15 +1,15 @@
-import { Parser } from 'json2csv'; 
+import { Parser } from "json2csv";
 import Attendee from "../model/attendee.model.js";
 import Badge from "../model/badge.model.js";
 import Scan from "../model/scan.model.js";
-import crypto from 'crypto';
+import crypto from "crypto";
 
 async function generateUnique6DigitHash() {
   let reg_number;
   let isUnique = false;
 
   while (!isUnique) {
-    reg_number = crypto.randomBytes(3).toString('hex').substring(0, 6);
+    reg_number = crypto.randomBytes(3).toString("hex").substring(0, 6);
     const existingAttendee = await Attendee.findOne({ reg_number });
 
     if (!existingAttendee) {
@@ -21,10 +21,11 @@ async function generateUnique6DigitHash() {
 }
 
 export const createAttendeeController = async (req, res) => {
-  console.log(req.body);
+
   try {
-    const reg_number = await generateUnique6DigitHash();
-    const {
+    let {reg_number} = req.body;
+
+    const { 
       name,
       place,
       mobile,
@@ -46,6 +47,10 @@ export const createAttendeeController = async (req, res) => {
       user_id,
       enteredIn,
     } = req.body;
+
+    if(!reg_number){
+      reg_number = await generateUnique6DigitHash();
+    }
 
     if (!name || !email) {
       return res
@@ -84,6 +89,7 @@ export const createAttendeeController = async (req, res) => {
       message: "Attendee created successfully",
       attendee: newAttendee,
     });
+    
   } catch (error) {
     console.error("Error creating attendee:", error.message);
     res.status(500).send({
@@ -92,7 +98,6 @@ export const createAttendeeController = async (req, res) => {
     });
   }
 };
- 
 
 export const getAttendeeController = async (req, res) => {
   try {
@@ -100,7 +105,10 @@ export const getAttendeeController = async (req, res) => {
     let query = {};
 
     if (searchQuery) {
-      const escapedSearchQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const escapedSearchQuery = searchQuery.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&"
+      );
 
       query = {
         $or: [
@@ -109,8 +117,8 @@ export const getAttendeeController = async (req, res) => {
           { place: { $regex: new RegExp(escapedSearchQuery, "i") } },
           { company: { $regex: new RegExp(escapedSearchQuery, "i") } },
           { designation: { $regex: new RegExp(escapedSearchQuery, "i") } },
-          { reg_number: { $regex: new RegExp(escapedSearchQuery, "i") } }
-        ]
+          { reg_number: { $regex: new RegExp(escapedSearchQuery, "i") } },
+        ],
       };
     } else {
       // Handle the case where no searchQuery is provided
@@ -118,7 +126,7 @@ export const getAttendeeController = async (req, res) => {
         success: true,
         TotalCount: 0,
         message: "No attendees found as no search query provided",
-        attendees: []
+        attendees: [],
       });
       return;
     }
@@ -142,7 +150,6 @@ export const getAttendeeController = async (req, res) => {
     });
   }
 };
-
 
 export const updateAttendeeController = async (req, res) => {
   console.log(req.body);
@@ -238,14 +245,14 @@ export const deleteAttendeeController = async (req, res) => {
   }
 };
 
-
 export const isAttendeeAllowed = async (req, res) => {
-  const { reg_number, scanId, scanType } = req.body;
-
+  const { reg_number, scan_id, scanType } = req.body;
+  console.log(reg_number, scan_id, scanType);
   try {
     const user = await Attendee.findOne({ reg_number });
-    const scan = await Scan.findById(scanId);
-
+    const scan = await Scan.findOne({ scan_id });
+    console.log('user', user);
+    console.log('scan', scan);
     if (!user || !scan) {
       return res.send({
         success: false,
@@ -253,21 +260,33 @@ export const isAttendeeAllowed = async (req, res) => {
       });
     }
 
-    if (user.notAllowed.includes(scanId)) {
+    if (user.notAllowed.includes(scan_id)) {
       return res.send({
         success: false,
         message: "Not allowed",
       });
     }
 
-    if (scanType === "single" && user.enteredIn.some(item => item.scanId.toString() === scanId)) {
+    if (
+      scanType === "single" &&
+      user.enteredIn.some((item) => item.scanId === scan_id)
+    ) {
       return res.send({
         success: false,
         message: "Allowed only once",
       });
     }
+    if (
+      scanType === "multi" &&
+      user.enteredIn.some((item) => item.scanId === scan_id)
+    ) {
+      return res.status(200).send({
+        success: true,
+        message: "Attendee is allowed",
+      });
+    }
 
-    user.enteredIn.push({ scanId });
+    user.enteredIn.push({ scanId:scan_id });
     await user.save();
 
     return res.status(200).send({
@@ -285,40 +304,42 @@ export const isAttendeeAllowed = async (req, res) => {
 
 export const exportAttendeesController = async (req, res) => {
   try {
-    const attendees = await Attendee.find().populate('badge state country how_us notAllowed badge_printed_by certificate_printed_by enteredIn.scanId');
+    const attendees = await Attendee.find().populate(
+      "badge state country how_us notAllowed badge_printed_by certificate_printed_by enteredIn.scanId"
+    );
 
     const fields = [
-      'reg_number',
-      'name',
-      'place',
-      'mobile',
-      'email',
-      'company',
-      'badge',
-      'reference',
-      'designation',
-      'state',
-      'country',
-      'how_us',
-      'notAllowed',
-      'badge_printed',
-      'badge_print_dt',
-      'badge_printed_by',
-      'certificate_printed_by',
-      'certificate_printed',
-      'certificate_print_dt',
-      'enteredIn'
+      "reg_number",
+      "name",
+      "place",
+      "mobile",
+      "email",
+      "company",
+      "badge",
+      "reference",
+      "designation",
+      "state",
+      "country",
+      "how_us",
+      "notAllowed",
+      "badge_printed",
+      "badge_print_dt",
+      "badge_printed_by",
+      "certificate_printed_by",
+      "certificate_printed",
+      "certificate_print_dt",
+      "enteredIn",
     ];
-    
+
     const opts = { fields };
     const parser = new Parser(opts);
     const csv = parser.parse(attendees);
 
-    res.header('Content-Type', 'text/csv');
-    res.attachment('attendees.csv');
+    res.header("Content-Type", "text/csv");
+    res.attachment("attendees.csv");
     return res.send(csv);
   } catch (error) {
-    console.error('Error exporting attendees:', error);
-    res.status(500).json({ error: 'Server error' });
+    console.error("Error exporting attendees:", error);
+    res.status(500).json({ error: "Server error" });
   }
 };
