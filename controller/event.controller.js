@@ -19,14 +19,14 @@ export const createEventController = async (req, res) => {
 
     await event.save();
 
-    res.status(201).json({
+    res.status(201).send({
       success: true,
       message: "Event created successfully",
       event,
     });
   } catch (error) {
     console.error("Error creating event:", error);
-    res.status(500).json({
+    res.send({
       success: false,
       message: "Internal Server Error - Error creating event",
     });

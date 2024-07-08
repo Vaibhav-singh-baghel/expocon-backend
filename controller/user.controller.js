@@ -5,7 +5,8 @@ import User from "../model/user.model.js";
 export const registerController = async (req, res) => {
   try {
     const { email, password, role } = req.body;
-
+    console.log(req.body)
+    
     if (!email || !password) {
       return res
         .status(400)
