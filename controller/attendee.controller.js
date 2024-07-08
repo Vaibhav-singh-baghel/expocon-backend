@@ -3,13 +3,20 @@ import Attendee from "../model/attendee.model.js";
 import Badge from "../model/badge.model.js";
 import Scan from "../model/scan.model.js";
 import crypto from "crypto";
-
-async function generateUnique6DigitHash() {
+ 
+async function generateUnique6CharRegNumber() {
   let reg_number;
   let isUnique = false;
 
-  while (!isUnique) {
-    reg_number = crypto.randomBytes(3).toString("hex").substring(0, 6);
+  while (!isUnique) { 
+    const alphabets = crypto.randomBytes(3).toString('hex').replace(/[^a-zA-Z]/g, '').substring(0, 3);
+    
+    if (alphabets.length < 3) {
+      continue;
+    }
+
+    const digits = (Math.floor(100 + Math.random() * 900)).toString();
+    reg_number = alphabets + digits;
     const existingAttendee = await Attendee.findOne({ reg_number });
 
     if (!existingAttendee) {
@@ -21,9 +28,8 @@ async function generateUnique6DigitHash() {
 }
 
 export const createAttendeeController = async (req, res) => {
-
   try {
-    let {reg_number} = req.body;
+    let { reg_number } = req.body;
 
     const { 
       name,
@@ -47,17 +53,18 @@ export const createAttendeeController = async (req, res) => {
       user_id,
       enteredIn,
     } = req.body;
-
-    if(!reg_number){
-      reg_number = await generateUnique6DigitHash();
+ 
+    if (!reg_number) {
+      reg_number = await generateUnique6CharRegNumber();
     }
-
+ 
     if (!name || !email) {
-      return res
-        .status(400)
-        .send({ success: false, message: "Name and email are required" });
+      return res.status(400).send({
+        success: false,
+        message: "Name and email are required"
+      });
     }
-
+ 
     const newAttendee = new Attendee({
       reg_number,
       name,
@@ -81,7 +88,7 @@ export const createAttendeeController = async (req, res) => {
       user_id,
       enteredIn,
     });
-
+ 
     await newAttendee.save();
 
     res.status(201).send({
@@ -89,7 +96,7 @@ export const createAttendeeController = async (req, res) => {
       message: "Attendee created successfully",
       attendee: newAttendee,
     });
-    
+
   } catch (error) {
     console.error("Error creating attendee:", error.message);
     res.status(500).send({
@@ -98,6 +105,9 @@ export const createAttendeeController = async (req, res) => {
     });
   }
 };
+
+
+
 
 export const getAttendeeController = async (req, res) => {
   try {
